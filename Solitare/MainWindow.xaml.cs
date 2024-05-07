@@ -50,13 +50,11 @@ namespace Solitare
                 Dropping(userControl, stackIndex, canvas);
 
             }
+
         }
         public void DisplayTop(CardUserControl userControl, Stack<Card> reversed, Canvas canvas, int stackIndex)
         {
-            if(reversed.Count == 0)
-            {
-                canvas.Children.Add(new UIElement());
-            }
+          
             foreach (var card in reversed)
             {
                 card.Stack = table.SpiderStacks[stackIndex];
@@ -96,18 +94,58 @@ namespace Solitare
         {
             // Display bottom stack
             StackPanel bottomStackPanel = new StackPanel();
-            bottomStackPanel.Orientation = Orientation.Vertical;
-
-            foreach (var card in table.Stock)
+            bottomStackPanel.Orientation = Orientation.Horizontal;
+            for (int i = 0; i < 5; i++)
             {
-                TextBlock cardText = new TextBlock();
-                cardText.Text = card.GetCardImagePath();
-                bottomStackPanel.Children.Add(cardText);
+                var card = table.Stock.ElementAt(i); // Access card by index
+
+                // Create an image for the card
+                Image cardImage = new Image();
+                cardImage.Width = 100;
+                cardImage.Height = 80;
+                cardImage.Source = new BitmapImage(new Uri(card.GetCardImagePath(), UriKind.Relative));
+
+                // Add click event handler to the image
+                cardImage.MouseDown += (sender, e) =>
+                {
+                    if (e.LeftButton == MouseButtonState.Pressed)
+                    {
+                        bottomStackPanel.Children.Remove(cardImage);
+                        NewLayer(table.Stock); // Call NewLayer() with the card from stock
+                    }
+                };
+
+                bottomStackPanel.Children.Add(cardImage);
             }
 
             Grid.SetColumn(bottomStackPanel, 0);
             Grid.SetRow(bottomStackPanel, 0);
             BottomStackGrid.Children.Add(bottomStackPanel);
+        }
+        public void NewLayer(List<Card> stockCards)
+        {
+            // Iterate through each stack and assign one card to each
+            for (int i = 0; i < table.SpiderStacks.Count; i++)
+            {
+                // Check if there are still cards to distribute
+                if (stockCards.Count > 0)
+                {
+                    // Remove the card from the stock and add it to the current stack
+                    Card card = stockCards[0];
+                    card.Uncover();
+                   // table.SpiderStacks[i].Push(card);
+                    UpdateCard(card, table.SpiderStacks[i]);
+                    stockCards.RemoveAt(0); // Remove the card from the stock
+                    
+                }
+                else
+                {
+                    // If there are no more cards to distribute, exit the loop
+                    break;
+                }
+            }
+
+            DisplayStacks(); // Update the UI after adding cards to stacks
         }
 
         public void AttachMouse(Image cardImage, Card card)
@@ -123,7 +161,7 @@ namespace Solitare
 
                     data.SetData("Object", card);
                     //card.Stack = table.SpiderStacks[stackIndex];
-
+                   
                     // Initiate the drag-and-drop operation.
                     DragDrop.DoDragDrop(this, data, DragDropEffects.Move);
                 }
@@ -166,6 +204,7 @@ namespace Solitare
                             UpdateCard(cardToMove, targetStack);
                         }
                         DisplayStacks();
+                        CheckForSequences();
                     }
                     else
                     {
@@ -186,7 +225,45 @@ namespace Solitare
             card.Stack.Push(card);
             AttachMouse(card.Image, card);
         }
+      
+        public void CheckForSequences()
+        {
+            foreach (var stack in table.SpiderStacks)
+            {
+                if (stack.Count >= 13)
+                {
+                    // Get the top card and its suit
+                    var topCard = stack.Peek();
+                    var suit = topCard.Suit;
+
+                    // Check if all cards from K to A of the same suit exist in the stack
+                    var sequenceExists = true;
+                    for (int i = topCard.Value; i >= topCard.Value - 12; i--)
+                    {
+                        var cardInSequence = stack.FirstOrDefault(card => card.Value == i && card.Suit == suit);
+                        if (cardInSequence == null)
+                        {
+                            sequenceExists = false;
+                            break;
+                        }
+                    }
+
+                    if (sequenceExists)
+                    {
+                        // Remove the cards from K to A of the same suit
+                        for (int i = topCard.Value; i >= topCard.Value - 12; i--)
+                        {
+                            var cardToRemove = stack.First(card => card.Value == i && card.Suit == suit);
+                            stack.Pop();
+                        }
+                    }
+                }
+            }
+        }
+
     }
+
 }
+
 
 

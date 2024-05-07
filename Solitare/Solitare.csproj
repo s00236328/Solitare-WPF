@@ -9,6 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="images\Backgrounds\Background.jpg" />
+    <None Remove="images\Backgrounds\empty.jpg" />
     <None Remove="images\Hearts\Back.png" />
     <None Remove="images\Hearts\C10.png" />
     <None Remove="images\Hearts\C2.png" />
@@ -62,6 +64,11 @@
     <None Remove="images\Hearts\SJ.png" />
     <None Remove="images\Hearts\SK.png" />
     <None Remove="images\Hearts\SQ.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="images\Backgrounds\Background.jpg" />
+    <Resource Include="images\Backgrounds\empty.jpg" />
   </ItemGroup>
 
   <ItemGroup>
