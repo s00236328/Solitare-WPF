@@ -14,13 +14,12 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Diagnostics;
-//main
+
 namespace Solitare
 {
     public partial class MainWindow : Window
     {
         private Table table = new Table();
-        private List<Canvas> canvases = new List<Canvas>();
         public MainWindow()
         {
             InitializeComponent();
@@ -29,34 +28,24 @@ namespace Solitare
         }
         private void DisplayStacks()
         {
-            foreach (Canvas canvas in canvases)
-            {
-                canvas.Children.Clear();
-            }
-            canvases.Clear();
             int stacks = 10;
 
             for (int i = 0; i < stacks; i++)
             {
                 Canvas canvas = new Canvas();
-                canvases.Add(canvas);
 
                 var currentStack = table.SpiderStacks[i].ToList();
                 var reversed = new Stack<Card>(currentStack);
-                CardUserControl userControl = new CardUserControl(table.SpiderStacks[i]);
+                UserControl1 userControl = new UserControl1(table.SpiderStacks[i]);
                 userControl.AllowDrop = true;
                 var stackIndex = i;
-                DisplayTop(userControl, reversed, canvas, stackIndex);
+                DisplayTop(userControl, reversed ,canvas, stackIndex);
                 Dropping(userControl, stackIndex, canvas);
-
+               
             }
         }
-        public void DisplayTop(CardUserControl userControl, Stack<Card> reversed, Canvas canvas, int stackIndex)
+        public void DisplayTop(UserControl1 userControl,Stack<Card> reversed,Canvas canvas,int stackIndex)
         {
-            if(reversed.Count == 0)
-            {
-                canvas.Children.Add(new UIElement());
-            }
             foreach (var card in reversed)
             {
                 card.Stack = table.SpiderStacks[stackIndex];
@@ -67,7 +56,7 @@ namespace Solitare
                 cardImage.Width = 100;
                 cardImage.Height = 80;
 
-                AttachMouse(cardImage, card);
+                AttachMouse(cardImage, card, stackIndex);
 
                 canvas.Children.Add(cardImage);
                 Canvas.SetTop(cardImage, 20 * canvas.Children.Count);
@@ -78,7 +67,7 @@ namespace Solitare
             Grid.SetRow(userControl, 0);
             TopStacksGrid.Children.Add(userControl);
         }
-        public bool IsValidMove(Card targetCard, Stack<Card> targetStack, Card cardMoved)
+        public bool IsValidMove(Card targetCard, Stack<Card> targetStack)
         {
             if (targetStack.Count == 0)
             {
@@ -89,7 +78,7 @@ namespace Solitare
             {
                 var topCard = targetStack.Peek();
                 // Check if the target card is one rank lower and of opposite color compared to the top card.
-                return cardMoved.Uncovered && targetCard.Value == topCard.Value - 1;
+                return targetCard.Value == topCard.Value - 1 ;
             }
         }
         public void DisplayBottom()
@@ -109,8 +98,16 @@ namespace Solitare
             Grid.SetRow(bottomStackPanel, 0);
             BottomStackGrid.Children.Add(bottomStackPanel);
         }
-
-        public void AttachMouse(Image cardImage, Card card)
+        private Image CreateCardImage(Card card)
+        {
+            Image cardImage = new Image();
+            card.Image = cardImage;
+            cardImage.Source = new BitmapImage(new Uri(card.GetCardImagePath(), UriKind.Relative));
+            cardImage.Width = 100;
+            cardImage.Height = 80;
+            return cardImage;
+        }
+        public void AttachMouse(Image cardImage,Card card,int stackIndex)
         {
             cardImage.MouseMove += (sender, e) =>
             {
@@ -122,50 +119,40 @@ namespace Solitare
                     DataObject data = new DataObject();
 
                     data.SetData("Object", card);
-                    //card.Stack = table.SpiderStacks[stackIndex];
+                    card.Stack = table.SpiderStacks[stackIndex];
 
                     // Initiate the drag-and-drop operation.
                     DragDrop.DoDragDrop(this, data, DragDropEffects.Move);
                 }
-            };
+            };          
         }
 
-        public void Dropping(CardUserControl userControl, int stackIndex, Canvas canvas)
+        public void Dropping(UserControl1 userControl, int stackIndex, Canvas canvas)
         {
             userControl.Drop += (sender, e) =>
             {
                 base.OnDrop(e);
                 if (e.Data.GetDataPresent("Object"))
                 {
-         
-                    var card = (Card)e.Data.GetData("Object");
+                    var draggedCard = (Card)e.Data.GetData("Object");
                     var targetStack = table.SpiderStacks[stackIndex];
 
-                    if (IsValidMove(card, targetStack, card))
+                    if (IsValidMove(draggedCard, targetStack))
                     {
-                        Stack<Card> toMove = new Stack<Card>();
-                        Card cardBelow;
-                        bool cardReached = false;
-                        while (!cardReached && card.Stack.TryPop(out cardBelow))
-                        {
-                            toMove.Push(cardBelow);
-                            if (cardBelow.Equals(card))
-                            {
-                                cardReached = true;
-                            }
-                        }
-
-                        if (card.Stack.TryPeek(out cardBelow))
+                        Image cardImage = CreateCardImage(draggedCard);
+                        AttachMouse(cardImage, draggedCard, stackIndex);
+                        canvas.Children.Remove(cardImage);
+                        Canvas.SetTop(cardImage, 20 * canvas.Children.Count + 20);
+                        canvas.Children.Add(cardImage);
+                        draggedCard.Stack.Pop().Image.Source = null;
+                        if (draggedCard.Stack.TryPeek(out var cardBelow))
                         {
                             cardBelow.Uncover();
                             cardBelow.Image.Source = new BitmapImage(new Uri(cardBelow.GetCardImagePath(), UriKind.Relative));
                         }
+                        draggedCard.Stack = table.SpiderStacks[stackIndex];
+                        draggedCard.Stack.Push(draggedCard);
 
-                        while (toMove.TryPop(out var cardToMove))
-                        {
-                            UpdateCard(cardToMove, targetStack);
-                        }
-                        DisplayStacks();
                     }
                     else
                     {
@@ -173,18 +160,6 @@ namespace Solitare
                     }
                 }
             };
-        }
-
-        public void UpdateCard(Card card, Stack<Card> tagetStack)
-        {
-            Image cardImage = new Image();
-            cardImage.Width = 100;
-            cardImage.Height = 80;
-            cardImage.Source = new BitmapImage(new Uri(card.GetCardImagePath(), UriKind.Relative));
-            card.Image = cardImage;
-            card.Stack = tagetStack;
-            card.Stack.Push(card);
-            AttachMouse(card.Image, card);
         }
     }
 }

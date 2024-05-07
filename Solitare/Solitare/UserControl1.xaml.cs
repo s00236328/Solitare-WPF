@@ -18,11 +18,11 @@ namespace Solitare
     /// <summary>
     /// Interaction logic for UserControl1.xaml
     /// </summary>
-    public partial class CardUserControl : UserControl
+    public partial class UserControl1 : UserControl
     {
         public Stack<Card> Cards;
 
-        public CardUserControl(Stack<Card> cards)
+        public UserControl1(Stack<Card> cards)
         {
             InitializeComponent();
             Cards = cards;
